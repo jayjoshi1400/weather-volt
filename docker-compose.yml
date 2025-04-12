@@ -1,10 +1,7 @@
-# Custom Airflow base with required dependencies for API connections
 x-airflow-common: &airflow-common
-  # CHANGE 1: Replace standard image with custom built image that has API dependencies
   build:
     context: ./docker-setup
     dockerfile: Dockerfile-airflow
-  # Original airflow configuration follows
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -22,7 +19,6 @@ x-airflow-common: &airflow-common
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
-    # CHANGE 2: Add shared data volume to Airflow
     - shared-data-volume:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on
@@ -46,7 +42,7 @@ services:
       interval: 20s
       timeout: 15s
       retries: 10
-      start_period: 90s  # Much longer grace period for Windows
+      start_period: 90s  
     restart: always
 
   redis:
@@ -181,7 +177,6 @@ services:
       - SPARK_SSL_ENABLED=no
     volumes:
       - spark-data:/bitnami
-      # CHANGE 5: Add shared data volume to Spark master
       - shared-data-volume:/opt/spark/data
 
   spark-worker:
@@ -199,7 +194,6 @@ services:
       - SPARK_SSL_ENABLED=no
     volumes:
       - spark-worker-data:/bitnami
-      # CHANGE 6: Add shared data volume to Spark worker
       - shared-data-volume:/opt/spark/data
 
   # dbt service
@@ -211,9 +205,13 @@ services:
       - ./dbt:/usr/app
     environment:
       - DBT_PROFILES_DIR=/usr/app/
+      - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
+      - SNOWFLAKE_USER=${SNOWFLAKE_USER}
+      - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
+
 
   # Grafana
   grafana:
@@ -241,5 +239,4 @@ volumes:
   spark-data:
   spark-worker-data:
   grafana-storage:
-  # CHANGE 7: Add shared data volume definition
   shared-data-volume:
