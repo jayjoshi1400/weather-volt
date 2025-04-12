@@ -1,4 +1,3 @@
-# airflow/dags/eia_electricity_demand_dag.py
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.models import Variable
@@ -18,13 +17,11 @@ def get_variable_json(var_name, default_value):
         var_value = Variable.get(var_name, deserialize_json=True)
         return var_value
     except (ValueError, TypeError):
-        # If not found or not valid JSON, try getting it as a string
         try:
             return Variable.get(var_name, default_value)
         except:
             return default_value
 
-# Default configurations that will be used if Variables aren't set
 DEFAULT_DATA_CONFIG = {
     "base_dir": "/opt/airflow/data",
     "eia_demand_subdir": "eia_demand_raw"
@@ -87,114 +84,6 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
-
-# def fetch_eia_electricity_demand():
-#     """
-#     Fetches electricity demand, retail salse, and generation data from EIA API for North Carolina
-#     """
-#     api_key = Variable.get("eia_api_key")
-    
-#     # Get balancing authorities and parameters from variables
-#     balancing_authorities = eia_config["balancing_authorities"]
-#     retail_sales_params = eia_config["retail_sales_params"]
-#     generation_params = eia_config["generation_params"]
-#     api_endpoint = eia_config["api_endpoint"]
-
-
-#     # Getting last timestamp in DB for incremental fetching and loading
-#     hook = SnowflakeHook(snowflake_conn_id='snowflake_conn')
-    
-#     latest_data_query = f"""
-#     SELECT MAX(f.value:period::TIMESTAMP) AS latest_timestamp 
-#     FROM {snowflake_config["database"]}.{snowflake_config["schema"]}.{snowflake_config["hourly_demand_table"]},
-#     LATERAL FLATTEN(input => raw_data:response.data) f
-#     """
-    
-#     try:
-#         latest_timestamp_result = hook.get_first(latest_data_query)
-#         if latest_timestamp_result and latest_timestamp_result[0]:
-#             latest_timestamp = latest_timestamp_result[0].strftime("%Y-%m-%dT%H:%M:%SZ")
-#             print(f"Incremental load starting from: {latest_timestamp}")
-#         else:
-#             latest_timestamp = "2023-01-01T00:00:00Z"
-#             print(f"No existing data, starting from default date: {latest_timestamp}")
-#     except Exception as e:
-#         print(f"Error retrieving latest timestamp, defaulting to full load: {str(e)}")
-#         latest_timestamp = None
-
-
-#     successful_fetches = 0
-#     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    
-#     # Fetch balancing authority hourly demand data - can be multiple
-#     for ba_name, series_id in balancing_authorities.items():
-#         url = f"{api_endpoint}/seriesid/{series_id}?api_key={api_key}"
-#         if latest_timestamp:
-#             url += f"&start={latest_timestamp}"
-        
-#         print(f"Requesting hourly demand data for {ba_name} with URL: {url}")
-        
-#         try:
-#             response = requests.get(url)
-            
-#             if response.status_code == 200:
-#                 data = response.json()
-#                 filename = f'{EIA_DEMAND_DIR}/eia_hourly_demand_{ba_name}_{timestamp}.json'
-                
-#                 with open(filename, 'w') as f:
-#                     json.dump(data, f, indent=2)
-                
-#                 print(f"Successfully saved hourly demand data for {ba_name}")
-#                 successful_fetches += 1
-#             else:
-#                 print(f"Error response: {response.text}")
-                
-#         except Exception as e:
-#             print(f"Exception when fetching hourly demand data for {ba_name}: {str(e)}")
-    
-#     # Fetch retail sales data for NC
-#     retail_url = f"{api_endpoint}/electricity/retail-sales/data?api_key={api_key}"
-#     for param, value in retail_sales_params.items():
-#         if isinstance(value, list):
-#             for item in value:
-#                 retail_url += f"&{param}={item}"
-#         else:
-#             retail_url += f"&{param}={value}"
-    
-#     print(f"Requesting retail sales data for NC with URL: {retail_url}")
-    
-#     try:
-#         response = requests.get(retail_url)
-        
-#         if response.status_code == 200:
-#             data = response.json()
-#             filename = f'{EIA_DEMAND_DIR}/eia_retail_sales_nc_{timestamp}.json'
-            
-#             with open(filename, 'w') as f:
-#                 json.dump(data, f, indent=2)
-            
-#             print(f"Successfully saved retail sales data for NC")
-#             successful_fetches += 1
-#         else:
-#             print(f"Error response: {response.text}")
-            
-#     except Exception as e:
-#         print(f"Exception when fetching retail sales data for NC: {str(e)}")
-    
-#     # Create metadata file
-#     metadata = {
-#         'balancing_authorities': list(balancing_authorities.keys()),
-#         'series_ids': list(balancing_authorities.values()),
-#         'retail_sales_state': retail_sales_params.get('facets[stateid][]', 'NC'),
-#         'timestamp': datetime.now().isoformat(),
-#         'hourly_demand_pattern': f'eia_hourly_demand_*_{timestamp}.json',
-#         'retail_sales_file': f'eia_retail_sales_nc_{timestamp}.json'
-#     }
-    
-#     with open(f'{EIA_DEMAND_DIR}/metadata_{timestamp}.json', 'w') as f:
-#         json.dump(metadata, f)
-    
-#     return successful_fetches
 
 def fetch_eia_hourly_demand():
     """
@@ -561,33 +450,6 @@ def generate_snowflake_load_sql(**context):
         return "SELECT CURRENT_TIMESTAMP() AS no_files_found;"
         
     return "\n".join(sql_commands)
-
-
-
-
-# def execute_load_sql(**context):
-#     """Generate and execute SQL to load files into Snowflake"""
-#     try:
-#         # Try to generate real SQL
-#         sql = generate_snowflake_load_sql(**context)
-        
-#         # Create Snowflake hook and execute the SQL
-#         hook = SnowflakeHook(snowflake_conn_id='snowflake_conn')
-#         hook.run(sql)
-        
-#         return f"Successfully executed SQL"
-#     except Exception as e:
-#         print(f"Error generating SQL: {str(e)}")
-        
-#         # Generate a simple test query instead
-#         test_sql = "SELECT CURRENT_TIMESTAMP() AS execution_time;"
-        
-#         # Execute the test SQL
-#         hook = SnowflakeHook(snowflake_conn_id='snowflake_conn')
-#         hook.run(test_sql)
-        
-#         return f"Executed test SQL instead due to error: {str(e)}"
-
 
 def generate_simple_test_sql():
     try:
