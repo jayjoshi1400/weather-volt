@@ -163,6 +163,43 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
+  # OpenWeatherMap services
+  openweather-producer:
+    build:
+      context: ./openweather
+      dockerfile: Dockerfile.producer
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=openweathermap-weather
+      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - ./openweather:/app
+
+  openweather-consumer:
+    build:
+      context: ./openweather
+      dockerfile: Dockerfile.consumer
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=openweathermap-weather
+      - KAFKA_GROUP=openweathermap-snowflake-group
+      - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
+      - SNOWFLAKE_USER=${SNOWFLAKE_USER}
+      - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
+      - SNOWFLAKE_DATABASE=ENERGY_DB
+      - SNOWFLAKE_SCHEMA=RAW
+      - SNOWFLAKE_WAREHOUSE=ENERGY_WH
+      - SNOWFLAKE_ROLE=ACCOUNTADMIN
+      - SNOWFLAKE_TABLE=OPENWEATHERMAP_CURRENT_JSON
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - ./openweather:/app
+      
   # Spark services
   spark-master:
     image: bitnami/spark:3.5.0
