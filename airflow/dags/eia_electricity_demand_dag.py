@@ -283,7 +283,6 @@ def fetch_eia_generation():
         
         if response.status_code == 200:
             data = response.json()
-            print(data)
             filename = f'{EIA_GENERATION_DIR}/eia_generation_nc_{timestamp}.json'
             
             with open(filename, 'w') as f:
