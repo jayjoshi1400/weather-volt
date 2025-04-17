@@ -9,5 +9,16 @@ energy_project:
       role: "ACCOUNTADMIN"  
       database: "ENERGY_DB"
       warehouse: "ENERGY_WH"
-      schema: "ANALYTICS"
+      schema: "STAGING" 
+      threads: 4
+    # Keeping them same currently
+    prod:  
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "ACCOUNTADMIN"  
+      database: "ENERGY_DB"
+      warehouse: "ENERGY_WH"
+      schema: "STAGING"
       threads: 4

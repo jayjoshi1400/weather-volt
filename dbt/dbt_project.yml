@@ -16,14 +16,31 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+packages:
+  - package: dbt-labs/dbt_utils
+    version: 1.0.0
+
 models:
   energy_project:
     raw:
       +materialized: view
       +schema: raw
+    
     staging:
       +materialized: view
       +schema: staging
+    
     analytics:
       +materialized: table
       +schema: analytics
+    
+    analytics_special:
+      cumulative:
+        +materialized: incremental
+        +schema: analytics
+        +incremental_strategy: merge
+      
+      state_tracking:
+        +materialized: incremental
+        +schema: analytics
+        +incremental_strategy: merge

@@ -1,0 +1,79 @@
+version: 2
+
+sources:
+  - name: raw
+    database: ENERGY_DB
+    schema: RAW
+    tables:
+      - name: EIA_HOURLY_DEMAND_JSON
+      - name: EIA_RETAIL_SALES_JSON
+      - name: EIA_ELECTRICITY_GENERATION_JSON
+      - name: NOAA_ISD_WEATHER_JSON
+      - name: OPENWEATHERMAP_CURRENT_JSON
+
+models:
+  - name: stg_electricity_demand_hourly
+    description: "Standardized hourly electricity demand"
+    columns:
+      - name: demand_id
+        description: "Unique identifier for each demand record"
+        tests:
+          - unique
+          - not_null
+      - name: balancing_authority
+        description: "The balancing authority (e.g., CPLE, DUK)"
+        tests:
+          - not_null
+      - name: timestamp
+        description: "The timestamp for the hourly demand data"
+        tests:
+          - not_null
+  - name: stg_electricity_sales_monthly
+    description: >
+      Monthly electricity sales, revenue, price, and customer counts for North Carolina
+      from the EIA retail sales data, broken down by sector.
+    columns:
+      - name: sales_id
+        description: Surrogate key created from period, state, and sector
+        tests:
+          - unique
+          - not_null
+      
+      - name: period
+        description: Month in YYYY-MM format
+        tests:
+          - not_null
+      
+      - name: state_id
+        description: State identifier (NC)
+        tests:
+          - not_null
+      
+      - name: sector_id
+        description: Sector identifier (residential, commercial, etc.)
+        tests:
+          - not_null
+      
+      - name: sales_mwh
+        description: Electricity sales in megawatt-hours
+        tests:
+          - not_null
+      
+      - name: revenue_usd
+        description: Revenue from electricity sales in US dollars
+      
+      - name: price_cents_per_kwh
+        description: Average price in cents per kilowatt-hour
+      
+      - name: customer_count
+        description: Number of customers in this sector
+      
+      - name: sales_date
+        description: Formatted date representing the sales period
+        tests:
+          - not_null
+      
+      - name: grain_id
+        description: Unique identifier for deduplication purposes
+        tests:
+          - not_null
