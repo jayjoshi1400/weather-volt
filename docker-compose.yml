@@ -19,6 +19,7 @@ x-airflow-common: &airflow-common
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
+    - ./dbt:/opt/airflow/dbt
     - shared-data-volume:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on
@@ -94,9 +95,11 @@ services:
         mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
         # CHANGE 3: Create data directory for shared volume
         mkdir -p /opt/airflow/data
+        mkdir -p /opt/airflow/dbt/logs
+        chmod -R 777 /opt/airflow/dbt/logs
         chown -R "${AIRFLOW_UID}:0" /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
-        # CHANGE 4: Set permissions for data directory
         chown -R "${AIRFLOW_UID}:0" /opt/airflow/data
+        chown -R "${AIRFLOW_UID}:0" /opt/airflow/dbt
         chmod -R 777 /opt/airflow/logs
         airflow db init
         airflow users create \
