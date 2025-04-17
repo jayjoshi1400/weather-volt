@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Project specific
+**/dbt_packages/
+dbt/target/
+**/logs/
+**/dbt_modules/
