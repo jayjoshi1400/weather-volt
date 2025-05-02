@@ -29,8 +29,8 @@ DEFAULT_NOAA_CONFIG = {
         "723150-03812", # Asheville Regional Airport
         "723020-13748"  # Wilmington International Airport
     ],
-    "start_year": 2022,  # Start with recent data for efficiency
-    "end_year": 2023,    # End year (inclusive)
+    "start_year": 2023,  # Start with recent data for efficiency
+    "end_year": 2025,    # End year (inclusive)
     "ftp_host": "ftp.ncei.noaa.gov",
     "ftp_dir": "/pub/data/noaa"
 }

@@ -62,6 +62,16 @@ with DAG(
         'SNOWFLAKE_PASSWORD': Variable.get("SNOWFLAKE_PASSWORD")
     }
     ) 
+
+    transform_generation_data = BashOperator(
+        task_id='transform_generation_data',
+        bash_command='cd /opt/airflow/dbt && /home/airflow/.local/bin/dbt run --models staging.stg_electricity_generation_monthly --profiles-dir /opt/airflow/dbt',
+        env={
+            'SNOWFLAKE_ACCOUNT': Variable.get("SNOWFLAKE_ACCOUNT"),
+            'SNOWFLAKE_USER': Variable.get("SNOWFLAKE_USER"),
+            'SNOWFLAKE_PASSWORD': Variable.get("SNOWFLAKE_PASSWORD")
+        }
+    )
  
     # Run dbt tests to validate the staging data
     test_demand_data = BashOperator(
@@ -84,6 +94,17 @@ with DAG(
         }
     ) 
 
-    # wait_for_eia_data >> [transform_demand_data, transform_sales_data]
+    test_generation_data = BashOperator(
+        task_id='test_generation_data',
+        bash_command='cd /opt/airflow/dbt && /home/airflow/.local/bin/dbt test --models staging.stg_electricity_generation_monthly --profiles-dir /opt/airflow/dbt',
+        env={
+            'SNOWFLAKE_ACCOUNT': Variable.get("SNOWFLAKE_ACCOUNT"),
+            'SNOWFLAKE_USER': Variable.get("SNOWFLAKE_USER"),
+            'SNOWFLAKE_PASSWORD': Variable.get("SNOWFLAKE_PASSWORD")
+        }
+    )
+
+    wait_for_eia_data >> [transform_demand_data, transform_sales_data, transform_generation_data]
     transform_demand_data >> test_demand_data
     transform_sales_data >> test_sales_data   
+    transform_generation_data >> test_generation_data
