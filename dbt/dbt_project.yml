@@ -30,6 +30,16 @@ models:
       +materialized: view
       +schema: staging
     
+    dimension:
+      +materialized: table
+      +schema: dimension
+    
+    fact:
+      +materialized: incremental
+      +schema: fact
+      +incremental_strategy: merge
+
+    
     analytics:
       +materialized: table
       +schema: analytics

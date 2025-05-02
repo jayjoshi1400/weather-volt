@@ -12,6 +12,7 @@ sources:
       - name: OPENWEATHERMAP_CURRENT_JSON
 
 models:
+# staging tables
   - name: stg_electricity_demand_hourly
     description: "Standardized hourly electricity demand"
     columns:
@@ -76,4 +77,521 @@ models:
       - name: grain_id
         description: Unique identifier for deduplication purposes
         tests:
+          - not_null       
+  
+  - name: stg_weather_historical_hourly
+    description: >
+      Historical hourly weather observations from NOAA ISD for North Carolina weather stations.
+      Contains temperature, pressure, and wind measurements. May contain null values for certain
+      measurements due to sensor failures or data quality issues.
+    columns:
+      - name: observation_id
+        description: Surrogate key created from station_id and timestamp
+        tests:
+          - unique
           - not_null
+      
+      - name: station_id
+        description: Identifier for the weather station
+        tests:
+          - not_null
+      
+      - name: timestamp
+        description: Timestamp of the observation (UTC)
+        tests:
+          - not_null
+      
+      - name: temperature_c
+        description: Temperature in Celsius (may be NULL due to sensor issues)
+      
+  - name: stg_weather_station_metadata
+    description: >
+      Metadata for weather stations in North Carolina, including location information
+      and operational details. Some stations may have incomplete coordinate data.
+    columns:
+      - name: station_id
+        description: Unique identifier for the weather station
+        tests:
+          - unique
+          - not_null
+      
+      - name: station_key
+        description: Surrogate key for the station
+        tests:
+          - unique
+          - not_null
+      
+      - name: latitude
+        description: Latitude coordinate of the station (may be NULL for some stations)
+      
+      - name: longitude
+        description: Longitude coordinate of the station (may be NULL for some stations)
+
+  - name: stg_electricity_generation_monthly
+    description: >
+      Monthly electricity generation data from EIA for North Carolina,
+      broken down by fuel type and sector. Contains information on renewable
+      and fossil fuel generation sources.
+    columns:
+      - name: generation_id
+        description: Surrogate key created from period, location, fuel type, and sector
+        tests:
+          - unique
+          - not_null
+      
+      - name: period
+        description: Month in YYYY-MM format
+        tests:
+          - not_null
+      
+      - name: location_code
+        description: Location identifier (NC)
+        tests:
+          - not_null
+      
+      - name: state_name
+        description: Full state name (North Carolina)
+        tests:
+          - not_null
+      
+      - name: fuel_type_id
+        description: Fuel type identifier (e.g., SUN, NG, COW)
+        tests:
+          - not_null
+      
+      - name: fuel_type_name
+        description: Description of the fuel type
+        tests:
+          - not_null
+      
+      - name: sector_id
+        description: Sector identifier for electricity generation
+        tests:
+          - not_null
+      
+      - name: sector_name
+        description: Description of the sector
+        tests:
+          - not_null
+      
+      - name: generation_mwh
+        description: Electricity generation in megawatt-hours (may be NULL for periods with no generation)
+      
+      - name: generation_units
+        description: Original units for generation data
+      
+      - name: is_renewable
+        description: Boolean flag indicating if the fuel source is renewable
+        tests:
+          - not_null
+      
+      - name: is_fossil_fuel
+        description: Boolean flag indicating if the fuel source is a fossil fuel
+        tests:
+          - not_null
+      
+      - name: generation_date
+        description: Formatted date representing the generation period
+        tests:
+          - not_null
+      
+      - name: grain_id
+        description: Unique identifier for deduplication purposes
+        tests:
+          - not_null  
+# dimension tables
+  - name: dim_location
+    description: >
+      Geographic locations dimension including states, weather stations, and balancing authorities.
+      Implemented as SCD Type 2 to track changes in location attributes over time.
+    columns:
+      - name: location_id
+        description: Surrogate key for joining to fact tables
+        tests:
+          - unique
+          - not_null
+      
+      - name: location_code
+        description: Business key for the location
+        tests:
+          - not_null
+      
+      - name: is_active
+        description: Flag indicating if location is currently active
+        tests:
+          - not_null
+          
+  - name: dim_energy_source
+    description: >
+      Energy generation sources dimension with attributes about fuel types.
+    columns:
+      - name: source_id
+        description: Surrogate key for joining to fact tables
+        tests:
+          - unique
+          - not_null
+      
+      - name: fuel_type_id
+        description: Business key for energy source
+        tests:
+          - unique
+          - not_null
+      
+      - name: is_renewable
+        description: Flag indicating renewable energy sources
+        tests:
+          - not_null
+      
+      - name: is_fossil_fuel
+        description: Flag indicating fossil fuel energy sources
+        tests:
+          - not_null
+
+  - name: dim_date
+    description: >
+      Calendar date dimension with attributes optimized for energy analytics.
+      Contains dates spanning 3 years before and after the current year,
+      with seasonal information, weekend flags, and major holiday indicators.
+    
+    columns:
+      - name: date
+        description: Calendar date in DATE format (primary chronological attribute)
+        tests:
+          - not_null
+          - unique
+      
+      - name: date_id
+        description: Surrogate key in YYYYMMDD format for joining to fact tables
+        tests:
+          - not_null
+          - unique
+      
+      - name: day_of_week
+        description: >
+          Numeric representation of day of week where 0=Sunday, 1=Monday, etc.
+          This follows Snowflake's DAYOFWEEK function convention.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6]
+      
+      - name: day_name
+        description: Text representation of day of week (Sunday, Monday, etc.)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      
+      - name: is_weekend
+        description: Boolean flag indicating if the date is a weekend (Saturday or Sunday)
+        tests:
+          - not_null
+      
+      - name: month_number
+        description: Numeric month from 1 (January) to 12 (December)
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      
+      - name: season
+        description: >
+          Season categorization using meteorological seasons for Northern Hemisphere:
+          Winter (Dec-Feb), Spring (Mar-May), Summer (Jun-Aug), Fall (Sep-Nov)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Winter', 'Spring', 'Summer', 'Fall']
+      
+      - name: loaded_at
+        description: Timestamp indicating when this record was created or last updated
+        tests:
+          - not_null
+# Fact tables
+  - name: fct_electricity_demand_hourly
+    description: >
+      Hourly electricity demand measurements for North Carolina balancing authorities.
+      Each record represents the demand for a specific hour and balancing authority.
+    config:
+      tags: ['fact', 'hourly', 'electricity']
+    columns:
+      - name: date_id
+        description: Foreign key to dim_date
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      
+      - name: hour_of_day
+        description: Hour of the day (0-23)
+        tests:
+          - not_null
+      
+      - name: location_id
+        description: Foreign key to dim_location for the balancing authority
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      
+      - name: timestamp
+        description: Exact timestamp of the demand measurement
+        tests:
+          - not_null
+      
+      - name: demand_mwh
+        description: Electricity demand in megawatt-hours
+        tests:
+          - not_null
+# fact tables
+  - name: fct_electricity_demand_hourly
+    description: >
+      Hourly electricity demand measurements for North Carolina balancing authorities.
+      Each record represents the demand for a specific hour and balancing authority.
+      This fact table connects to dim_date, dim_location dimensions.
+    config:
+      tags: ['fact', 'hourly', 'electricity', 'demand']
+    columns:
+      - name: date_id
+        description: Foreign key to dim_date (YYYYMMDD format)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      
+      - name: hour_of_day
+        description: Hour of the day (0-23)
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+      
+      - name: location_id
+        description: Foreign key to dim_location for the balancing authority
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      
+      - name: timestamp
+        description: Exact timestamp of the demand measurement
+        tests:
+          - not_null
+      
+      - name: demand_mwh
+        description: Electricity demand in megawatt-hours
+        tests:
+          - not_null
+      
+      - name: hourly_demand_change_mwh
+        description: Change in demand from the previous hour for the same balancing authority
+      
+      - name: is_negative_demand
+        description: Flag indicating whether demand is negative (can occur with distributed generation)
+        tests:
+          - not_null
+      
+      - name: day_part
+        description: Classification of the hour (MORNING_PEAK, MIDDAY, EVENING_PEAK, OFF_PEAK)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MORNING_PEAK', 'MIDDAY', 'EVENING_PEAK', 'OFF_PEAK']
+
+  - name: fct_weather_observations_hourly
+    description: >
+      Hourly weather observations from NOAA ISD stations in North Carolina.
+      Each record contains temperature, humidity, pressure, and other measurements
+      for a specific hour and weather station.
+    config:
+      tags: ['fact', 'hourly', 'weather', 'observations']
+    columns:
+      - name: date_id
+        description: Foreign key to dim_date (YYYYMMDD format)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      
+      - name: hour_of_day
+        description: Hour of the day (0-23)
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+      
+      - name: station_id
+        description: Weather station identifier
+        tests:
+          - not_null
+      
+      - name: location_id
+        description: Foreign key to dim_location for the weather station
+        tests:
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      
+      - name: timestamp
+        description: Exact timestamp of the weather observation
+        tests:
+          - not_null
+      
+      - name: temperature_c
+        description: Air temperature in Celsius
+      
+      - name: dew_point_c
+        description: Dew point temperature in Celsius
+      
+      - name: pressure_hpa
+        description: Barometric pressure in hectopascals
+      
+      - name: wind_speed_ms
+        description: Wind speed in meters per second
+      
+      - name: heating_degree_c
+        description: Heating degrees (based on 18.3°C/65°F baseline)
+      
+      - name: cooling_degree_c
+        description: Cooling degrees (based on 18.3°C/65°F baseline)
+      
+      - name: hourly_temp_change_c
+        description: Change in temperature from the previous hour for the same station
+      
+      - name: feels_like_temp_c
+        description: Perceived temperature (factoring in wind chill or heat index) in Celsius
+      
+      - name: temperature_category
+        description: Classification of temperature (HOT, WARM, MILD, COLD, VERY_COLD)
+        tests:
+          - accepted_values:
+              values: ['HOT', 'WARM', 'MILD', 'COLD', 'VERY_COLD', 'UNKNOWN']
+
+  - name: fct_electricity_generation_monthly
+    description: >
+      Monthly electricity generation by energy source for North Carolina.
+      Each record represents generation for a specific month, location, and energy source.
+    config:
+      tags: ['fact', 'monthly', 'electricity', 'generation']
+    columns:
+      - name: date_id
+        description: Foreign key to dim_date for the first day of the month (YYYYMMDD format)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      
+      - name: location_id
+        description: Foreign key to dim_location
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      
+      - name: energy_source_id
+        description: Foreign key to dim_energy_source
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_energy_source')
+              field: source_id
+      
+      - name: generation_date
+        description: First day of the generation month
+        tests:
+          - not_null
+      
+      - name: generation_mwh
+        description: Electricity generation in megawatt-hours
+        tests:
+          - not_null
+      
+      - name: percentage_of_total
+        description: Percentage this source contributes to total generation for the month
+        tests:
+          - not_null
+      
+      - name: monthly_generation_change_mwh
+        description: Change in generation from the previous month for the same source
+      
+      - name: is_renewable
+        description: Flag indicating whether the energy source is renewable
+        tests:
+          - not_null
+      
+      - name: is_fossil_fuel
+        description: Flag indicating whether the energy source is a fossil fuel
+        tests:
+          - not_null
+
+  - name: fct_electricity_sales_monthly
+    description: >
+      Monthly electricity sales, revenue, and customer counts for North Carolina by sector.
+      Each record represents sales for a specific month and customer sector.
+    config:
+      tags: ['fact', 'monthly', 'electricity', 'sales']
+    columns:
+      - name: date_id
+        description: Foreign key to dim_date for the first day of the month (YYYYMMDD format)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      
+      - name: location_id
+        description: Foreign key to dim_location (state)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      
+      - name: sector_id
+        description: Customer sector identifier (residential, commercial, industrial, etc.)
+        tests:
+          - not_null
+      
+      - name: sales_date
+        description: First day of the sales month
+        tests:
+          - not_null
+      
+      - name: sales_mwh
+        description: Electricity sales in megawatt-hours
+        tests:
+          - not_null
+      
+      - name: revenue_usd
+        description: Revenue from electricity sales in US dollars
+        tests:
+          - not_null
+      
+      - name: price_cents_per_kwh
+        description: Average electricity price in cents per kilowatt-hour
+        tests:
+          - not_null
+      
+      - name: customer_count
+        description: Number of customers in this sector
+        tests:
+          - not_null
+      
+      - name: avg_usage_per_customer_mwh
+        description: Average electricity usage per customer in megawatt-hours
+      
+      - name: revenue_per_mwh_usd
+        description: Average revenue per megawatt-hour in US dollars
+      
+      - name: yoy_sales_change_percent
+        description: Year-over-year percentage change in electricity sales
+      
+      - name: mom_sales_change_percent
+        description: Month-over-month percentage change in electricity sales
