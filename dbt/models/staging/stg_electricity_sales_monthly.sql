@@ -34,8 +34,8 @@ parsed_data AS (
         sales_data:stateid::STRING AS state_id,
         sales_data:stateDescription::STRING AS state_name,
         sales_data:sectorid::STRING AS sector_id,
-        sales_data:sectorDescription::STRING AS sector_name,
-        sales_data:consumption::FLOAT AS sales_mwh,
+        sales_data:sectorName::STRING AS sector_name,    
+        sales_data:sales::FLOAT AS sales_mwh,            
         sales_data:revenue::FLOAT AS revenue_usd,
         sales_data:price::FLOAT AS price_cents_per_kwh,
         sales_data:customers::INTEGER AS customer_count,
@@ -44,7 +44,8 @@ parsed_data AS (
         EXTRACT(MONTH FROM sales_date) AS month
     FROM flattened_data
     WHERE sales_data:stateid::STRING = 'NC' 
-),
+)
+,
 
 with_grain_id AS (
     SELECT
