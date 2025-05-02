@@ -116,125 +116,125 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
-  # Kafka services
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-log:/var/lib/zookeeper/log
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  # # Kafka services
+  # zookeeper:
+  #   image: confluentinc/cp-zookeeper:7.5.0
+  #   ports:
+  #     - "2181:2181"
+  #   environment:
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #     ZOOKEEPER_TICK_TIME: 2000
+  #   volumes:
+  #     - zookeeper-data:/var/lib/zookeeper/data
+  #     - zookeeper-log:/var/lib/zookeeper/log
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "2181"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
 
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.5.0
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - "9092:9092"
+  #     - "29092:29092"
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #   volumes:
+  #     - kafka-data:/var/lib/kafka/data
+  #   healthcheck:
+  #     test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.5.0
-    depends_on:
-      - kafka
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+  # schema-registry:
+  #   image: confluentinc/cp-schema-registry:7.5.0
+  #   depends_on:
+  #     - kafka
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SCHEMA_REGISTRY_HOST_NAME: schema-registry
+  #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+  #     SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
-  # OpenWeatherMap services
-  openweather-producer:
-    build:
-      context: ./openweather
-      dockerfile: Dockerfile.producer
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - KAFKA_TOPIC=openweathermap-weather
-      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
-    depends_on:
-      - kafka
-    restart: unless-stopped
-    volumes:
-      - ./openweather:/app
+  # # OpenWeatherMap services
+  # openweather-producer:
+  #   build:
+  #     context: ./openweather
+  #     dockerfile: Dockerfile.producer
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - KAFKA_TOPIC=openweathermap-weather
+  #     - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
+  #   depends_on:
+  #     - kafka
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./openweather:/app
 
-  openweather-consumer:
-    build:
-      context: ./openweather
-      dockerfile: Dockerfile.consumer
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - KAFKA_TOPIC=openweathermap-weather
-      - KAFKA_GROUP=openweathermap-snowflake-group
-      - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
-      - SNOWFLAKE_USER=${SNOWFLAKE_USER}
-      - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
-      - SNOWFLAKE_DATABASE=ENERGY_DB
-      - SNOWFLAKE_SCHEMA=RAW
-      - SNOWFLAKE_WAREHOUSE=ENERGY_WH
-      - SNOWFLAKE_ROLE=ACCOUNTADMIN
-      - SNOWFLAKE_TABLE=OPENWEATHERMAP_CURRENT_JSON
-    depends_on:
-      - kafka
-    restart: unless-stopped
-    volumes:
-      - ./openweather:/app
+  # openweather-consumer:
+  #   build:
+  #     context: ./openweather
+  #     dockerfile: Dockerfile.consumer
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - KAFKA_TOPIC=openweathermap-weather
+  #     - KAFKA_GROUP=openweathermap-snowflake-group
+  #     - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
+  #     - SNOWFLAKE_USER=${SNOWFLAKE_USER}
+  #     - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
+  #     - SNOWFLAKE_DATABASE=ENERGY_DB
+  #     - SNOWFLAKE_SCHEMA=RAW
+  #     - SNOWFLAKE_WAREHOUSE=ENERGY_WH
+  #     - SNOWFLAKE_ROLE=ACCOUNTADMIN
+  #     - SNOWFLAKE_TABLE=OPENWEATHERMAP_CURRENT_JSON
+  #   depends_on:
+  #     - kafka
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./openweather:/app
       
-  # Spark services
-  spark-master:
-    image: bitnami/spark:3.5.0
-    ports:
-      - "8090:8080"
-      - "7077:7077"
-    environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    volumes:
-      - spark-data:/bitnami
-      - shared-data-volume:/opt/spark/data
+  # # Spark services
+  # spark-master:
+  #   image: bitnami/spark:3.5.0
+  #   ports:
+  #     - "8090:8080"
+  #     - "7077:7077"
+  #   environment:
+  #     - SPARK_MODE=master
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   volumes:
+  #     - spark-data:/bitnami
+  #     - shared-data-volume:/opt/spark/data
 
-  spark-worker:
-    image: bitnami/spark:3.5.0
-    depends_on:
-      - spark-master
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_WORKER_CORES=1
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    volumes:
-      - spark-worker-data:/bitnami
-      - shared-data-volume:/opt/spark/data
+  # spark-worker:
+  #   image: bitnami/spark:3.5.0
+  #   depends_on:
+  #     - spark-master
+  #   environment:
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_MEMORY=1G
+  #     - SPARK_WORKER_CORES=1
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   volumes:
+  #     - spark-worker-data:/bitnami
+  #     - shared-data-volume:/opt/spark/data
 
   # dbt service
   dbt:
@@ -266,17 +266,18 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_PLUGINS_PREINSTALL=grafana-clock-panel
+      - GF_PLUGINS_PREINSTALL=grafana-clock-panel,michelin-snowflake-datasource@@https://github.com/michelin/snowflake-grafana-datasource/releases/latest/download/snowflake-grafana-datasource.zip
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=michelin-snowflake-datasource
     depends_on:
       postgres:
         condition: service_healthy
 
 volumes:
   postgres-db-volume:
-  zookeeper-data:
-  zookeeper-log:
-  kafka-data:
-  spark-data:
-  spark-worker-data:
+  # zookeeper-data:
+  # zookeeper-log:
+  # kafka-data:
+  # spark-data:
+  # spark-worker-data:
   grafana-storage:
   shared-data-volume:
