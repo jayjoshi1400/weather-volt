@@ -52,4 +52,15 @@ NOAA provides comprehensive weather data through its Integrated Surface Database
 - Format: Fixed-width text files (parsed into structured JSON)
 
 ## Data Ingestion and Integration
+To integrate different data sources, steps were taken to be able to perform cohesive analysis. 
+### Aligning Temporal Data
+All datasets do not follow the same update frequency, resulting in some data being collected monthly, while some hourly. To address this:
+- Hourly weather observations are aligned with hourly electricity demand data using timestamp-based joins
+- Monthly generation and retail data are aggregated and summarized from hourly demand data to enable period-over-period analysis
+  
+### Geographic Mapping
+Although done later stage, particularly when creating dimension models, I feel this mapping should be explained here to explain the discrepancies in data. To create mapping between the locations from weather data and electricity data, a custom table is being used to map balancing authorities to nearest relevant weather station. This mapping is crucial for correlation analyis.
 
+### Incremental downloads 
+- The raw table in Snowflake is queried for the latest timestamp it has
+- Only data after this timestamp is queried for by adjusting the start parameter accordingly for each API basded on their frequency 
