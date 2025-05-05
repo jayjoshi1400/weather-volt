@@ -90,7 +90,28 @@ The pipeline maintains separate layers:
 
 Key Dags:
 1. Raw data extraction:
-  ![weather-volt](./images/raw_eia_dag.png | width=100)
-![weather-volt](./images/raw_noaa_dag.png | width=100)
- 
+   
+<div align="center">
+  <img src="./images/raw_eia_dag.png" width="48%" alt="weather-volt">
+  <img src="./images/raw_noaa_dag.png" width="48%" alt="weather-volt">
+</div>
+
+2. Staging tables:
+
+<div align="center">
+  <img src="./images/stg_electricity_dag" width="48%" alt="weather-volt">
+  <img src="./images/stg_weather_dag" width="48%" alt="weather-volt">
+</div>
+
+3. Dimension and Fact Tables:
+<div align="center">
+  <img src="./images/dim_dag" width="48%" alt="weather-volt">
+  <img src="./images/fact_dag" width="48%" alt="weather-volt">
+</div>
+
+4. Analytics table:
+<div align="center">
+  <img src="./images/analytical_dag" width="48%" alt="weather-volt">
+</div>
+
 
