@@ -88,5 +88,9 @@ The pipeline maintains separate layers:
 3. Staging layer: Tables are cleaned with basic transformations
 4. Analytics layer: Business ready models with metrics and dimensions.
 
-
+Key Dags:
+1. Raw data extraction:
+  ![weather-volt](./images/raw_eia_dag.png | width=100)
+![weather-volt](./images/raw_noaa_dag.png | width=100)
+ 
 
