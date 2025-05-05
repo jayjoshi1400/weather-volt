@@ -62,5 +62,31 @@ All datasets do not follow the same update frequency, resulting in some data bei
 Although done later stage, particularly when creating dimension models, I feel this mapping should be explained here to explain the discrepancies in data. To create mapping between the locations from weather data and electricity data, a custom table is being used to map balancing authorities to nearest relevant weather station. This mapping is crucial for correlation analyis.
 
 ### Incremental downloads 
-- The raw table in Snowflake is queried for the latest timestamp it has
+- The raw tables in Snowflake are queried for the latest timestamp it has
 - Only data after this timestamp is queried for by adjusting the start parameter accordingly for each API basded on their frequency 
+
+
+## Infrastructure Setup
+Docker containerization has been used to create a reproducible and portable environment. The following interconnected containers are used:  
+- airflow-webserver: Airflow UI and web service
+- airflow-scheduler: Orchestrates task execution
+- airflow-worker: Executes data pipeline tasks
+- postgres: Metadata database for Airflow
+- dbt: Runs transformation logic
+- grafana: Visualization and dashboarding
+
+Environment specific settings are managed through a combination of .env files to store credentials, airflow variables and docker environment variables.
+
+Docker volume is used to persist data and Docker network is used for container-to-container communication.
+
+## Data Pipeline Architecture
+A Extract Load Tranform (ELT) architecture is used, leveraging Snowflake's compute for transformations. This helps preserve the raw data, allows for complex transforms and supports reprocessing if business logic changes.
+
+The pipeline maintains separate layers:
+1. Extraction layer: Data is retrived from source
+2. Raw layer: Unmodified data is stored in Snowlake and file storage
+3. Staging layer: Tables are cleaned with basic transformations
+4. Analytics layer: Business ready models with metrics and dimensions.
+
+
+
