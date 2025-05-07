@@ -3,6 +3,16 @@
 
 WeatherVolt is a comprehensive data engineering solution designed to analyze electricity demand patterns, weather correlations, and grid performance. The platform integrates electricity data with weather observations to provide deep insights into energy consumption behaviors and enable data-driven decision making. Currently, the platform focuses on North Carolina, with the technical architecture designed to accommodate expansion to additional regions as needed.
 
+## Table of Contents
+1. [Key Features](#key-features)
+2. [Data Sources](#data-sources)
+3. [Data Ingestion and Integration](#data-ingestion-and-integration)
+4. [Infrastructure Setup](#infrastructure-setup)
+5. [Data Orchestration](#data-orchestration)
+6. [Data Pipeline](#data-pipeline)
+7. [Data Modeling](#data-modeling)
+8. [Visualization](#visualization)
+
 ## Key Features
 - **End-to-end ELT Pipeline:** Containerized data extraction, loading, and transformation workflow that processes both electricity demand and weather observation data
 - **Multi-stage Data Processing:** Structured data handling through raw, staging, and analytics layers with proper validations at each stage
