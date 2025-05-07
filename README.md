@@ -79,16 +79,8 @@ Environment specific settings are managed through a combination of .env files to
 
 Docker volume is used to persist data and Docker network is used for container-to-container communication.
 
-## Data Pipeline Architecture
-A Extract Load Tranform (ELT) architecture is used, leveraging Snowflake's compute for transformations. This helps preserve the raw data, allows for complex transforms and supports reprocessing if business logic changes.
-
-The pipeline maintains separate layers:
-1. Extraction layer: Data is retrived from source
-2. Raw layer: Unmodified data is stored in Snowlake and file storage
-3. Staging layer: Tables are cleaned with basic transformations
-4. Analytics layer: Business ready models with metrics and dimensions.
-
-Key Dags:
+## Data Orchestration
+Orchestration is done by Apache Airflow. The key dags:
 1. Raw data extraction:
    
 <div align="center">
@@ -99,19 +91,87 @@ Key Dags:
 2. Staging tables:
 
 <div align="center">
-  <img src="./images/stg_electricity_dag" width="48%" alt="weather-volt">
-  <img src="./images/stg_weather_dag" width="48%" alt="weather-volt">
+  <img src="./images/stg_electricity_dag.png" width="48%" alt="weather-volt">
+  <img src="./images/stg_weather_dag.png" width="48%" alt="weather-volt">
 </div>
 
 3. Dimension and Fact Tables:
 <div align="center">
-  <img src="./images/dim_dag" width="48%" alt="weather-volt">
-  <img src="./images/fact_dag" width="48%" alt="weather-volt">
+  <img src="./images/dim_dag.png" width="48%" alt="weather-volt">
+  <img src="./images/fact_dag.png" width="48%" alt="weather-volt">
 </div>
 
 4. Analytics table:
 <div align="center">
-  <img src="./images/analytical_dag" width="48%" alt="weather-volt">
+  <img src="./images/analytical_dag.png" width="48%" alt="weather-volt">
 </div>
 
+## Data Pipeline
+
+A Extract Load Tranform (ELT) architecture is used, leveraging Snowflake's compute for transformations. This helps preserve the raw data, allows for complex transforms and supports reprocessing if business logic changes.
+
+The pipeline maintains separate layers:
+1. Extraction layer: Data is retrived from source
+2. Raw layer: Unmodified data is stored in Snowlake and file storage
+3. Staging layer: Tables are cleaned with basic transformations
+4. Analytics layer: Business ready models with metrics and dimensions.
+
+<div align="center">
+  <img src="./images/data_architecture_diag.png" alt="weather-volt">
+</div>
+
+### dbt Implementation
+Data Build Tool (dbt) is used to manage transformations with several key features:
+- Materialization Strategies: Tables vs views based on access patterns
+- Testing Framework: Column nullability, uniqueness, and referential integrity on tables
+- Documentation: Auto-generated catalog of tables and columns
+- Packages: Using dbt_utils for surrogate key generation and other utilities
+
+## Data Modeling 
+### Backfilling support
+1. Surrogate keys are generated using the dbt_utils package to create consistent identifiers. This helps create Idempotent transformations that won't create duplicates and SCDs. For example:
+```
+{{ dbt_utils.generate_surrogate_key(['balancing_authority_id', 'timestamp']) }} AS state_change_id
+```
+2. Incremental loading patterns are implemented to efficiently process only new data, which significantly reduces processing time and resource usage:
+```
+WHERE {% if is_incremental() %}
+    -- Only process new data
+    d.date > (SELECT MAX(date) FROM {{ this }})
+{% else %}
+    -- Process the last 730 days (2 years) for initial load
+    d.date >= DATEADD(day, -730, CURRENT_DATE())
+{% endif %}
+```
+
+### Analytical Tables
+Several analytical tables have been made based on the dimension and fact tables:
+1. analytics_generation_mix: Analyzes electricity generation patterns by fuel type, tracking renewable percentages, year-over-year changes, and estimating CO2 emissions
+2. analytics_peak_demand_drivers: Identifies factors contributing to peak demand events, quantifying the impact of weather, time-of-day, and weekend effects
+3. analytics_weather_demand_correlation: Calculates temperature sensitivity coefficients and demand anomalies, providing insights into weather's impact on electricity consumption
+   
+### Special Analytical Models
+1. analytics_demand_pattern_cumulative:
+  - Tracks trailing 7/30/90-day averages
+  - Calculates period-over-period changes (month, quarter)
+2. State Change Tracking: Implements an event-based state tracking model 
+   - Captures transitions between demand states (LOW, NORMAL, HIGH, PEAK, CRITICAL)
+   - Classifies change triggers (MORNING_RAMP, WEEKEND_REDUCTION, etc.)
+   - Records duration of previous states and transition timestamps
+
+## Visualization
+Grafana is used to translate complex data patterns into actionable insights through interactive dashboards.
+1. Grid Demand State Timeline: Color-coded state timeline showing transitions between demand levels (LOW, NORMAL, HIGH, PEAK), associated triggers (WEEKEND_REDUCTION, MORNING_RAMP, EVENING_PEAK), and corresponding temperature readings, enabling operators to identify patterns in grid state changes.
+2. Peak Demand Drivers: Stacked bar chart decomposing demand events into contributing factors (WEATHER_IMPACT, WEEKEND_IMPACT, TIME_OF_DAY_IMPACT), quantifying the relative contribution of each driver to help prioritize demand response strategies.
+3. Peak Demand Events Timeline: Multi-line time series visualization overlaying demand measurements with peak hour flags and temperature readings, making it easy to spot correlations between weather events and demand spikes.
+4. Temperature-Demand Correlation: Dual-axis chart displaying daily demand alongside temperature patterns and correlation coefficients, providing statistical evidence of weather's impact on consumption patterns.
+5. Trailing Averages: Time series visualization showing 7/30/90-day trailing demand averages to smooth out daily fluctuations and reveal longer-term trends.
+
+https://github.com/michelin/snowflake-grafana-datasource has been used since the open source version of Grafana was used.
+
+
+## Future Enhancements
+1. Expanding to additional balancing authorities and regions
+2. Adding predictive modeling for demand response optimization
+3. Implementing real-time alerting for unusual grid state transitions
 
